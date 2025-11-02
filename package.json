@@ -1,23 +1,45 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "scrivsidian",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "Obsidian plugin for importing Scrivener projects.",
 	"main": "main.js",
+	"type": "module",
+	"license": "MIT",
+	"private": false,
+	"engines": {
+		"node": ">= 14.0.0",
+		"npm": ">= 6.0.0"
+	},
+	"homepage": "",
+	"repository": {
+		"type": "git",
+		"url": ""
+	},
+	"bugs": "",
+	"keywords": [],
+	"author": {
+		"name": "Marcel Bestebroer",
+		"email": "marcel.bestebroer@gmail.com",
+		"url": "https://github.com/marcelb1973"
+	},
+	"contributors": [],
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-		"version": "node version-bump.mjs && git add manifest.json versions.json"
+		"version": "node version-bump.mjs && git add manifest.json versions.json",
+		"prepare": "husky install"
 	},
-	"keywords": [],
-	"author": "",
-	"license": "MIT",
 	"devDependencies": {
+		"@commitlint/cli": "^20.1.0",
+		"@commitlint/config-conventional": "^20.0.0",
 		"@types/node": "^16.11.6",
-		"@typescript-eslint/eslint-plugin": "5.29.0",
-		"@typescript-eslint/parser": "5.29.0",
+		"@typescript-eslint/eslint-plugin": "^6.21.0",
+		"@typescript-eslint/parser": "^6.21.0",
 		"builtin-modules": "3.3.0",
 		"esbuild": "^0.25.11",
+		"husky": "^8.0.0",
 		"obsidian": "latest",
+		"prettier": "^3.6.2",
 		"tslib": "2.4.0",
 		"typescript": "4.7.4"
 	}
