@@ -41,13 +41,18 @@ export default class ImportModal extends Modal {
 
     public inputChanged(){
         const { inputSetting, current } = this;
-        const input = current.getInputPath();
+        const input = current.getInputName();
         if (input === null) {
             inputSetting.setDesc('Pick the file to import');
             return;
         }
 
-        inputSetting.setDesc(input);
+        const description = new DocumentFragment();
+        description.createEl('span', { text: 'Selected Scrivener project:' });
+        description.createEl('br');
+        description.createEl('span', { cls: 'u-pop', text: input });
+
+        inputSetting.setDesc(description);
     }
 
 	onClose() {

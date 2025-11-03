@@ -1,4 +1,6 @@
+import type * as NodePath from 'node:path';
 import ImportModal from "src/views/import-modal/view";
+export const path: typeof NodePath = window.require('node:path');
 
 export default class ImportContext{
     protected readonly view: ImportModal;
@@ -31,6 +33,14 @@ export default class ImportContext{
 
     public getInputPath(): string | null{
         return this._inputPath;
+    }
+
+    public getInputName(): string | null {
+        if (this._inputPath === null) {
+            return null;
+        }
+
+        return path.basename(this._inputPath);
     }
 
     public setInputPath(path: string){
