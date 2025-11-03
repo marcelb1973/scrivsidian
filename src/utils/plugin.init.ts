@@ -1,10 +1,12 @@
 import Scrivsidian from "src/main";
+import { registerContextMenu } from "./plugin.ctxmenu";
 import { Platform } from "obsidian";
 
 export function init(self: Scrivsidian) {
-    console.log(`[Scrivsidian] Initializing plugin`);
+    self.logInfo('Initializing plugin');
     if (!Platform.isDesktop) {
-        console.log(`[Scrivsidian] Not a desktop platform; this plugin won't work well on non-desktop platforms.`);
+        self.logWarning('Not a desktop platform; this plugin won\'t work well on non-desktop platforms.');
         return;
     }
+    registerContextMenu(self);
 }
