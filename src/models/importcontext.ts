@@ -101,6 +101,21 @@ export default class ImportContext{
     }
     // #endregion properties: scenesHaveTitleProperty
 
+    // #region properties: prefixChapterFoldersWithNumber
+    private _prefixChapterFoldersWithNumber: boolean = false;
+    public get prefixChapterFoldersWithNumber(): boolean {
+        return this._prefixChapterFoldersWithNumber;
+    }
+    public set prefixChapterFoldersWithNumber(value: boolean) {
+        if (value == this._prefixChapterFoldersWithNumber) {
+            return;
+        }
+
+        this._prefixChapterFoldersWithNumber = value;
+        this.prefixChapterFoldersWithNumberChanged();
+    }
+    // #endregion properties: prefixChapterFoldersWithNumber
+
     public constructor(view: ImportModal){
         this.view = view;
         this._inputPath = null;
@@ -124,6 +139,12 @@ export default class ImportContext{
     protected scenesHaveTitlePropertyChanged() {
         // notify UI
         this.view.scenesHaveTitlePropertyChanged();
+        this.view.updateConfigUi();
+    }
+
+    protected prefixChapterFoldersWithNumberChanged() {
+        // notify UI
+        this.view.prefixChapterFoldersWithNumberChanged();
         this.view.updateConfigUi();
     }
     // #endregion properties changed

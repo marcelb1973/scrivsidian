@@ -11,6 +11,7 @@ export default class ImportModal extends Modal {
     private readonly inputSetting: Setting;
     private readonly rootSetting: Setting;
     private readonly scenesHaveTitlePropertySetting: Setting;
+    private readonly prefixChapterFoldersWithNumberSetting: Setting;
     private readonly currentInfoEl: HTMLDivElement;
     public readonly plugin: Scrivsidian;
 
@@ -77,6 +78,15 @@ export default class ImportModal extends Modal {
                     .onChange(value => this.current.scenesHaveTitleProperty = value)
             })
         ;
+        this.prefixChapterFoldersWithNumberSetting = new Setting(this.contentEl)
+            .setName('Prefix chapter folders')
+            .setDesc('When on, each chapter folder (binder item containing only scenes) is prefixed by its numerical index in it\'s parent.')
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.current.prefixChapterFoldersWithNumber)
+                    .onChange(value => this.current.prefixChapterFoldersWithNumber = value)
+            })
+        ;
 
         this.currentInfoEl = this.contentEl.createDiv({ cls: 'scrivsidian-import-currentinfo' });
 
@@ -101,18 +111,19 @@ export default class ImportModal extends Modal {
     }
 
     public rootChanged(){
-        const { scenesHaveTitlePropertySetting, current } = this;
+        const { scenesHaveTitlePropertySetting, prefixChapterFoldersWithNumberSetting, current } = this;
         const rootBinder = current.root;
 
-        if (!rootBinder) {
-            scenesHaveTitlePropertySetting.setDisabled(true);
-        }
-
         scenesHaveTitlePropertySetting.setDisabled(!rootBinder);
+        prefixChapterFoldersWithNumberSetting.setDisabled(!rootBinder);
     }
 
     public scenesHaveTitlePropertyChanged() {
-        // TODO
+        // void
+    }
+
+    public prefixChapterFoldersWithNumberChanged() {
+        // void
     }
 
     public updateConfigUi() {
@@ -146,7 +157,9 @@ export default class ImportModal extends Modal {
         const optionsParagraph = importDescription.createEl('p');
         optionsParagraph.createEl('span', { text: 'The title property ' });
         optionsParagraph.createEl('span', { cls: 'u-pop', text: current.scenesHaveTitleProperty ? 'will' : 'won\'t' });
-        optionsParagraph.createEl('span', { text: ' be set on the scenes.' });
+        optionsParagraph.createEl('span', { text: ' be set on the scenes, chapter folders ' });
+        optionsParagraph.createEl('span', { cls: 'u-pop', text: current.prefixChapterFoldersWithNumber ? 'will' : 'won\'t' });
+        optionsParagraph.createEl('span', { text: ' be prefixed by their index number.' });
 
         currentInfoEl.setText(importDescription);
     }
