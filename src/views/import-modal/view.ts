@@ -31,6 +31,10 @@ export default class ImportModal extends Modal {
 
         this.current = new ImportContext(this);
 
+        new Setting(this.contentEl)
+            .setName('Input')
+            .setHeading();
+
         this.inputSetting = new Setting(this.contentEl)
             .setName("File")
             .setDesc('Pick the file to import')
@@ -73,6 +77,11 @@ export default class ImportModal extends Modal {
                 ;
             })
         ;
+
+        new Setting(this.contentEl)
+            .setName('Output')
+            .setHeading();
+
         this.outputLocationSetting = new Setting(this.contentEl)
             .setName('Location')
             .setDesc('Pick the vault location to import into.')
@@ -93,6 +102,11 @@ export default class ImportModal extends Modal {
                     .onChange(value => this.current.createSubFolderForProject = value)
             })
         ;
+
+        new Setting(this.contentEl)
+            .setName('Options')
+            .setHeading();
+
         this.scenesHaveTitlePropertySetting = new Setting(this.contentEl)
             .setName('Add scene title property')
             .setDesc('When on, each scene note will have a title property set')
@@ -111,6 +125,10 @@ export default class ImportModal extends Modal {
                     .onChange(value => this.current.prefixChapterFoldersWithNumber = value)
             })
         ;
+
+        new Setting(this.contentEl)
+            .setName('Configured import process')
+            .setHeading();
 
         this.currentInfoEl = this.contentEl.createDiv({ cls: 'scrivsidian-import-currentinfo' });
 
