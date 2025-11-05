@@ -75,7 +75,7 @@ export default class ImportContext{
         else {
             this._root = binderFolder;
         }
-        this.view.rootChanged();
+        this.rootChanged();
     }
 
     public get importableFolders(): BinderFolder[] {
@@ -87,6 +87,7 @@ export default class ImportContext{
     }
     // #endregion properties: project binder
 
+    // #region properties: scenesHaveTitleProperty
     private _scenesHaveTitleProperty: boolean = false;
     public get scenesHaveTitleProperty(): boolean {
         return this._scenesHaveTitleProperty;
@@ -98,24 +99,36 @@ export default class ImportContext{
         this._scenesHaveTitleProperty = value;
         this.scenesHaveTitlePropertyChanged();
     }
+    // #endregion properties: scenesHaveTitleProperty
 
     public constructor(view: ImportModal){
         this.view = view;
         this._inputPath = null;
     }
 
+    // #region properties changed
     protected inputPathChanged(){
         // notify UI
         this.view.inputChanged();
+        this.view.updateConfigUi();
         // update Scrivener binder
         this.parseScrivx();
+    }
+
+    protected rootChanged() {
+        // notify UI
+        this.view.rootChanged();
+        this.view.updateConfigUi();
     }
 
     protected scenesHaveTitlePropertyChanged() {
         // notify UI
         this.view.scenesHaveTitlePropertyChanged();
+        this.view.updateConfigUi();
     }
+    // #endregion properties changed
 
+    // #region scrivx parsing
     private parseScrivx(){
         if (this._inputPath === null) {
             return;
@@ -181,6 +194,7 @@ export default class ImportContext{
     private static isFolderElement(element: any) {
         return element.Children || element.Type == 'Folder' || element.Type == 'TrashFolder' || element.Type == 'DraftFolder'
     }
+    // #endregion scrivx parsing
 
     public cancel() {
     }

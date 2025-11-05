@@ -11,6 +11,7 @@ export default class ImportModal extends Modal {
     private readonly inputSetting: Setting;
     private readonly rootSetting: Setting;
     private readonly scenesHaveTitlePropertySetting: Setting;
+    private readonly currentInfoEl: HTMLDivElement;
     public readonly plugin: Scrivsidian;
 
     constructor(plugin: Scrivsidian, parent: TFolder){
@@ -26,7 +27,8 @@ export default class ImportModal extends Modal {
         this.current = new ImportContext(this);
 
         this.inputSetting = new Setting(this.contentEl)
-            .setName("File to import")
+            .setName("File")
+            .setDesc('Pick the file to import')
             .addButton(btn => {
                 btn
                     .setIcon('files')
@@ -48,7 +50,8 @@ export default class ImportModal extends Modal {
                     })
             });
         this.rootSetting = new Setting(this.contentEl)
-            .setName('Select root binder item')
+            .setName('Root binder item')
+            .setDesc('Pick the root Scrivener binder item to import.')
             .addButton(btn => {
                 btn
                     .setIcon('lucide-folder-tree')
@@ -69,32 +72,28 @@ export default class ImportModal extends Modal {
             .setName('Add scene title property')
             .setDesc('When on, each scene note will have a title property set')
             .addToggle(toggle => {
-                toggle.setValue(this.current.scenesHaveTitleProperty)
+                toggle
+                    .setValue(this.current.scenesHaveTitleProperty)
+                    .onChange(value => this.current.scenesHaveTitleProperty = value)
             })
         ;
+
+        this.currentInfoEl = this.contentEl.createDiv({ cls: 'scrivsidian-import-currentinfo' });
 
         this.inputChanged();
         this.rootChanged();
         this.scenesHaveTitlePropertyChanged();
+        this.updateConfigUi();
     }
 
     public inputChanged(){
-        const { inputSetting, rootSetting, current } = this;
+        const { rootSetting, current } = this;
         const input = current.inputName;
         if (input === null) {
-            inputSetting.setDesc('Pick the file to import');
-            rootSetting.setDisabled(true);
             current.root = undefined;
-            return;
         }
 
-        const description = new DocumentFragment();
-        description.createEl('span', { text: 'Selected Scrivener project:' });
-        description.createEl('br');
-        description.createEl('span', { cls: 'u-pop', text: input });
-
-        inputSetting.setDesc(description);
-        rootSetting.setDisabled(false);
+        rootSetting.setDisabled(input === null);
     }
 
     public structureChanged() {
@@ -102,26 +101,54 @@ export default class ImportModal extends Modal {
     }
 
     public rootChanged(){
-        const { rootSetting, scenesHaveTitlePropertySetting, current } = this;
+        const { scenesHaveTitlePropertySetting, current } = this;
         const rootBinder = current.root;
 
         if (!rootBinder) {
-            rootSetting.setDesc('Pick the root Scrivener folder to import.');
             scenesHaveTitlePropertySetting.setDisabled(true);
-            return;
         }
 
-        const fragment = new DocumentFragment();
-        fragment.createSpan({ text: 'Importing ' });
-        fragment.createSpan({ text: rootBinder.totalSceneCount.toString(), cls: 'u-pop' });
-        fragment.createSpan({ text: ' scenes from folder ' })
-        fragment.createSpan({ text: rootBinder.title, cls: 'u-pop' });
-        rootSetting.setDesc(fragment);
-        scenesHaveTitlePropertySetting.setDisabled(false);
+        scenesHaveTitlePropertySetting.setDisabled(!rootBinder);
     }
 
     public scenesHaveTitlePropertyChanged() {
         // TODO
+    }
+
+    public updateConfigUi() {
+        const { currentInfoEl, current } = this;
+
+        currentInfoEl.empty();
+        if (!current.inputPath) {
+            currentInfoEl.createSpan({ text: 'Pick a Scrivener project to start the import process.' });
+            return;
+        }
+        if (!current.root) {
+            const importDescription = new DocumentFragment();
+            importDescription.createEl('span', { text: 'You\'ll be importing from ' });
+            importDescription.createEl('span', { cls: 'u-pop', text: current.inputName! });
+            importDescription.createEl('span', { text: '; however, you need to select which binder folder you want to import.' });
+            currentInfoEl.setText(importDescription);
+            return;
+        }
+
+        const importDescription = new DocumentFragment();
+
+        const selectionParagraph = importDescription.createEl('p');
+        selectionParagraph.createEl('span', { text: 'You\'ll be importing ' });
+        selectionParagraph.createEl('span', { cls: 'u-pop', text: current.root!.totalSceneCount.toString() });
+        selectionParagraph.createEl('span', { text: ' scenes from binder ' });
+        selectionParagraph.createEl('span', { cls: 'u-pop', text: current.root!.title });
+        selectionParagraph.createEl('span', { text: ' in ' });
+        selectionParagraph.createEl('span', { cls: 'u-pop', text: current.inputName! });
+        selectionParagraph.createEl('span', { text: '.' });
+
+        const optionsParagraph = importDescription.createEl('p');
+        optionsParagraph.createEl('span', { text: 'The title property ' });
+        optionsParagraph.createEl('span', { cls: 'u-pop', text: current.scenesHaveTitleProperty ? 'will' : 'won\'t' });
+        optionsParagraph.createEl('span', { text: ' be set on the scenes.' });
+
+        currentInfoEl.setText(importDescription);
     }
 
 	onClose() {
