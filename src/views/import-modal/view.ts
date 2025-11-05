@@ -10,6 +10,7 @@ export default class ImportModal extends Modal {
     private readonly current: ImportContext;
     private readonly inputSetting: Setting;
     private readonly rootSetting: Setting;
+    private readonly scenesHaveTitlePropertySetting: Setting;
     public readonly plugin: Scrivsidian;
 
     constructor(plugin: Scrivsidian, parent: TFolder){
@@ -64,9 +65,17 @@ export default class ImportModal extends Modal {
                 ;
             })
         ;
+        this.scenesHaveTitlePropertySetting = new Setting(this.contentEl)
+            .setName('Add scene title property')
+            .setDesc('When on, each scene note will have a title property set')
+            .addToggle(toggle => {
+                toggle.setValue(this.current.scenesHaveTitleProperty)
+            })
+        ;
 
         this.inputChanged();
         this.rootChanged();
+        this.scenesHaveTitlePropertyChanged();
     }
 
     public inputChanged(){
@@ -75,6 +84,7 @@ export default class ImportModal extends Modal {
         if (input === null) {
             inputSetting.setDesc('Pick the file to import');
             rootSetting.setDisabled(true);
+            current.root = undefined;
             return;
         }
 
@@ -92,11 +102,12 @@ export default class ImportModal extends Modal {
     }
 
     public rootChanged(){
-        const { rootSetting, current } = this;
+        const { rootSetting, scenesHaveTitlePropertySetting, current } = this;
         const rootBinder = current.root;
 
         if (!rootBinder) {
             rootSetting.setDesc('Pick the root Scrivener folder to import.');
+            scenesHaveTitlePropertySetting.setDisabled(true);
             return;
         }
 
@@ -106,6 +117,11 @@ export default class ImportModal extends Modal {
         fragment.createSpan({ text: ' scenes from folder ' })
         fragment.createSpan({ text: rootBinder.title, cls: 'u-pop' });
         rootSetting.setDesc(fragment);
+        scenesHaveTitlePropertySetting.setDisabled(false);
+    }
+
+    public scenesHaveTitlePropertyChanged() {
+        // TODO
     }
 
 	onClose() {

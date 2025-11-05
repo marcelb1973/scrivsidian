@@ -50,12 +50,12 @@ export default class ImportContext{
         return this._root;
     };
 
-    public set root(uuidOrBinderFolder: string | BinderFolder) {
+    public set root(uuidOrBinderFolder: string | BinderFolder | undefined) {
         let binderFolder: BinderFolder | undefined = undefined;
         if (typeof uuidOrBinderFolder === 'string') {
             binderFolder = this.importableFolders.find(sf => sf.uuid == uuidOrBinderFolder);
         }
-        else {
+        else if (uuidOrBinderFolder instanceof BinderFolder) {
             binderFolder = uuidOrBinderFolder;
         }
 
@@ -87,6 +87,18 @@ export default class ImportContext{
     }
     // #endregion properties: project binder
 
+    private _scenesHaveTitleProperty: boolean = false;
+    public get scenesHaveTitleProperty(): boolean {
+        return this._scenesHaveTitleProperty;
+    }
+    public set scenesHaveTitleProperty(value: boolean) {
+        if (value == this._scenesHaveTitleProperty) {
+            return;
+        }
+        this._scenesHaveTitleProperty = value;
+        this.scenesHaveTitlePropertyChanged();
+    }
+
     public constructor(view: ImportModal){
         this.view = view;
         this._inputPath = null;
@@ -97,6 +109,11 @@ export default class ImportContext{
         this.view.inputChanged();
         // update Scrivener binder
         this.parseScrivx();
+    }
+
+    protected scenesHaveTitlePropertyChanged() {
+        // notify UI
+        this.view.scenesHaveTitlePropertyChanged();
     }
 
     private parseScrivx(){
