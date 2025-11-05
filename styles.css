@@ -1,8 +1,78 @@
-/*
+.scrivsidian-binder-view {
+  --info-width: 48px;
+  --margin-width: 8px;
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+div.scrivsidian-bindertree {
+  width: 100%;
+  height: 300px;
+  overflow-y: scroll;
+}
+.scrivsidian-bindertree ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 1.2em;
+  position: relative;
+}
 
-If your plugin does not need CSS, delete this file.
+.scrivsidian-bindertree li {
+  position: relative;
+  padding-left: 1em;
+  line-height: 1.8em;
+}
+.scrivsidian-bindertree li::before {
+  content: '';
+  position: absolute;
+  top: 0.9em;
+  left: 0;
+  width: 0.8em;
+  height: 0;
+  border-top: 1px solid var(--text-muted);
+}
 
-*/
+.scrivsidian-bindertree li::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-left: 1px solid var(--text-muted);
+}
+
+.scrivsidian-bindertree li:last-child::after {
+  height: 0.9em;
+}
+
+.scrivsidian-bindertree-header,
+.scrivsidian-bindertree li > div {
+  color: var(--text-normal);
+}
+
+.scrivsidian-bindertree li > div:hover {
+  background-color: var(--interactive-hover);
+  cursor: pointer;
+}
+
+.scrivsidian-bindertree-header > .info,
+.scrivsidian-bindertree li > div > .info {
+  display: inline-block;
+  width: var(--info-width);
+  text-align: right;
+}
+
+.scrivsidian-bindertree li > div > .info {
+  color: var(--text-muted);
+}
+
+.scrivsidian-bindertree-header > .title,
+.scrivsidian-bindertree li > div > .title {
+  display: inline-block;
+  width: calc(100% - var(--info-width) - var(--margin-width));
+  margin-right: var(--margin-width);
+}
+
+.scrivsidian-bindertree-buttonbar {
+  display: flex;
+  flex-direction: row;
+  justify-content: end;
+}

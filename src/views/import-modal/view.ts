@@ -1,15 +1,20 @@
 import { Modal, Setting, TFolder } from "obsidian";
 import Scrivsidian from "src/main";
+import { BinderFolder } from "src/models/binderitem";
 import ImportContext from "src/models/importcontext";
+import SelectScrivenerBinderItem from "../common-modal/select-scriv-binderitem";
 
 export default class ImportModal extends Modal {
     private parent: TFolder;
     private abortController: AbortController;
     private readonly current: ImportContext;
     private readonly inputSetting: Setting;
+    private readonly rootSetting: Setting;
+    public readonly plugin: Scrivsidian;
 
     constructor(plugin: Scrivsidian, parent: TFolder){
         super(plugin.app);
+        this.plugin = plugin;
         this.parent = parent;
         this.abortController = new AbortController();
         this.setTitle(plugin.ActionTitle);
@@ -23,7 +28,7 @@ export default class ImportModal extends Modal {
             .setName("File to import")
             .addButton(btn => {
                 btn
-                    .setButtonText("Choose file")
+                    .setIcon('files')
                     .onClick(async () => {
 						let properties = ['openFile', 'dontAddToRecent'];
 						let filePaths: string[] = window.electron.remote.dialog.showOpenDialogSync({
@@ -31,19 +36,45 @@ export default class ImportModal extends Modal {
 							filters: [{ name, extensions }],
 						});
 
+                        if (!filePaths) {
+                            // file selection was canceled
+                            return;
+                        }
+
                         if (filePaths.length > 0) {
-                            this.current.setInputPath(filePaths[0]);
+                            this.current.inputPath = filePaths[0];
                         }
                     })
             });
+        this.rootSetting = new Setting(this.contentEl)
+            .setName('Select root binder item')
+            .addButton(btn => {
+                btn
+                    .setIcon('lucide-folder-tree')
+                    .onClick(async () => {
+                        const selectedFolder = await SelectScrivenerBinderItem
+                            .select(this.plugin, this.current.importableFolders);
+                        if (!selectedFolder) {
+                            // root folder selection was canceled
+                            return;
+                        }
+
+                        this.current.root = selectedFolder as BinderFolder;
+                    })
+                ;
+            })
+        ;
+
         this.inputChanged();
+        this.rootChanged();
     }
 
     public inputChanged(){
-        const { inputSetting, current } = this;
-        const input = current.getInputName();
+        const { inputSetting, rootSetting, current } = this;
+        const input = current.inputName;
         if (input === null) {
             inputSetting.setDesc('Pick the file to import');
+            rootSetting.setDisabled(true);
             return;
         }
 
@@ -53,6 +84,28 @@ export default class ImportModal extends Modal {
         description.createEl('span', { cls: 'u-pop', text: input });
 
         inputSetting.setDesc(description);
+        rootSetting.setDisabled(false);
+    }
+
+    public structureChanged() {
+        // void
+    }
+
+    public rootChanged(){
+        const { rootSetting, current } = this;
+        const rootBinder = current.root;
+
+        if (!rootBinder) {
+            rootSetting.setDesc('Pick the root Scrivener folder to import.');
+            return;
+        }
+
+        const fragment = new DocumentFragment();
+        fragment.createSpan({ text: 'Importing ' });
+        fragment.createSpan({ text: rootBinder.totalSceneCount.toString(), cls: 'u-pop' });
+        fragment.createSpan({ text: ' scenes from folder ' })
+        fragment.createSpan({ text: rootBinder.title, cls: 'u-pop' });
+        rootSetting.setDesc(fragment);
     }
 
 	onClose() {
