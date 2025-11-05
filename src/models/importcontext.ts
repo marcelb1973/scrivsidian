@@ -3,6 +3,7 @@ import type * as NodeFS from "node:fs";
 import type * as NodePath from 'node:path';
 import ImportModal from "src/views/import-modal/view";
 import { AbstractBinderItem, BinderFolder, BinderScene, isBinderFolder } from "./binderitem";
+import { TFolder } from "obsidian";
 
 export const fs: typeof NodeFS = window.require('node:original-fs');
 export const path: typeof NodePath = window.require('node:path');
@@ -38,6 +39,15 @@ export default class ImportContext{
         }
 
         return path.basename(this._inputPath);
+    }
+
+    public get projectName(): string {
+        const name = this.inputName;
+        if (!name) {
+            return '';
+        }
+
+        return name.substring(0, name.length - '.scrivx'.length);
     }
     // #endregion properties: project selection
 
@@ -116,6 +126,46 @@ export default class ImportContext{
     }
     // #endregion properties: prefixChapterFoldersWithNumber
 
+    // #region properties: outputLocation
+    private _outputLocation: TFolder | undefined = undefined;
+    public get outputLocation(): TFolder | undefined {
+        return this._outputLocation;
+    }
+
+    public set outputLocation(value: TFolder | undefined) {
+        const currentPath = this._outputLocation?.path || '';
+        const newPath = value?.path || '';
+
+        if (currentPath == newPath) {
+            return;
+        }
+
+        this._outputLocation = value;
+        this.outputLocationChanged();
+    }
+
+    public get fullOutputPath(): string {
+        const basePath = this.outputLocation?.path || '';
+        const suffix = this._createSubFolderForProject ? this.projectName : '';
+        return basePath + (basePath.endsWith('/') ? '' : '/') + suffix;
+    }
+    // #endregion properties: outputLocation
+
+    // #region properties: createSubFolderForProject
+    private _createSubFolderForProject: boolean = false;
+    public get createSubFolderForProject(): boolean {
+        return this._createSubFolderForProject;
+    }
+    public set createSubFolderForProject(value: boolean) {
+        if (value == this._createSubFolderForProject) {
+            return;
+        }
+
+        this._createSubFolderForProject = value;
+        this.createSubFolderForProjectChanged();
+    }
+    // #endregion properties: createSubFolderForProject
+
     public constructor(view: ImportModal){
         this.view = view;
         this._inputPath = null;
@@ -145,6 +195,18 @@ export default class ImportContext{
     protected prefixChapterFoldersWithNumberChanged() {
         // notify UI
         this.view.prefixChapterFoldersWithNumberChanged();
+        this.view.updateConfigUi();
+    }
+
+    protected outputLocationChanged() {
+        // notify UI
+        this.view.outputLocationChanged();
+        this.view.updateConfigUi();
+    }
+
+    protected createSubFolderForProjectChanged() {
+        // notify UI
+        this.view.createSubFolderForProjectChanged();
         this.view.updateConfigUi();
     }
     // #endregion properties changed

@@ -3,16 +3,20 @@ import Scrivsidian from "src/main";
 import { BinderFolder } from "src/models/binderitem";
 import ImportContext from "src/models/importcontext";
 import SelectScrivenerBinderItem from "../common-modal/select-scriv-binderitem";
+import FolderSuggest from "src/utils/foldersuggest";
 
 export default class ImportModal extends Modal {
-    private parent: TFolder;
+    private readonly parent: TFolder;
     private abortController: AbortController;
     private readonly current: ImportContext;
     private readonly inputSetting: Setting;
     private readonly rootSetting: Setting;
+    private readonly outputLocationSetting: Setting;
+    private readonly createSubFolderForProjectSetting: Setting;
     private readonly scenesHaveTitlePropertySetting: Setting;
     private readonly prefixChapterFoldersWithNumberSetting: Setting;
     private readonly currentInfoEl: HTMLDivElement;
+    private readonly importButton: HTMLButtonElement;
     public readonly plugin: Scrivsidian;
 
     constructor(plugin: Scrivsidian, parent: TFolder){
@@ -69,6 +73,26 @@ export default class ImportModal extends Modal {
                 ;
             })
         ;
+        this.outputLocationSetting = new Setting(this.contentEl)
+            .setName('Location')
+            .setDesc('Pick the vault location to import into.')
+            .addText(txt => {
+                txt
+                    .setValue(this.parent.isRoot() ? '/' : this.parent.path)
+                    .onChange(value => this.setOutputLocation(value))
+                ;
+                new FolderSuggest(this.app, txt.inputEl, this.parent);
+            })
+        ;
+        this.createSubFolderForProjectSetting = new Setting(this.contentEl)
+            .setName('New sub folder')
+            .setDesc('When on, a new sub folder is created to import the project into')
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.current.createSubFolderForProject)
+                    .onChange(value => this.current.createSubFolderForProject = value)
+            })
+        ;
         this.scenesHaveTitlePropertySetting = new Setting(this.contentEl)
             .setName('Add scene title property')
             .setDesc('When on, each scene note will have a title property set')
@@ -90,9 +114,13 @@ export default class ImportModal extends Modal {
 
         this.currentInfoEl = this.contentEl.createDiv({ cls: 'scrivsidian-import-currentinfo' });
 
+        const buttonContainerEl = this.contentEl.createDiv('modal-button-container');
+        this.importButton = buttonContainerEl.createEl('button', { cls: 'mod-cta', text: 'Import' });
+
         this.inputChanged();
         this.rootChanged();
         this.scenesHaveTitlePropertyChanged();
+        this.current.outputLocation = this.parent;
         this.updateConfigUi();
     }
 
@@ -116,6 +144,7 @@ export default class ImportModal extends Modal {
 
         scenesHaveTitlePropertySetting.setDisabled(!rootBinder);
         prefixChapterFoldersWithNumberSetting.setDisabled(!rootBinder);
+        this.importButton.disabled = !rootBinder;
     }
 
     public scenesHaveTitlePropertyChanged() {
@@ -123,6 +152,19 @@ export default class ImportModal extends Modal {
     }
 
     public prefixChapterFoldersWithNumberChanged() {
+        // void
+    }
+
+    public createSubFolderForProjectChanged() {
+        // void
+    }
+
+    protected setOutputLocation(value: string) {
+        const folder = value == '' ? undefined : (this.app.vault.getFolderByPath(value) || undefined);
+        this.current.outputLocation = folder;
+    }
+
+    public outputLocationChanged() {
         // void
     }
 
@@ -153,6 +195,11 @@ export default class ImportModal extends Modal {
         selectionParagraph.createEl('span', { text: ' in ' });
         selectionParagraph.createEl('span', { cls: 'u-pop', text: current.inputName! });
         selectionParagraph.createEl('span', { text: '.' });
+
+        const outputParagraph = importDescription.createEl('p');
+        outputParagraph.createEl('span', { text: 'The project will be imported into ' });
+        outputParagraph.createEl('span', { cls: 'u-pop', text: current.fullOutputPath });
+        outputParagraph.createEl('span', { text: '.' });
 
         const optionsParagraph = importDescription.createEl('p');
         optionsParagraph.createEl('span', { text: 'The title property ' });
