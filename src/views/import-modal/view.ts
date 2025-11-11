@@ -30,6 +30,7 @@ export default class ImportModal extends Modal {
         const extensions = ['scrivx'];
 
         this.current = new ImportContext(this);
+        this.modalEl.addClass('scrivsidian-import-modal');
 
         new Setting(this.contentEl)
             .setName('Input')
