@@ -1,12 +1,7 @@
-import { XMLParser } from "fast-xml-parser";
-import type * as NodeFS from "node:fs";
-import type * as NodePath from 'node:path';
 import ImportModal from "src/views/import-modal/view";
-import { AbstractBinderItem, BinderFolder, BinderScene, isBinderFolder } from "./binderitem";
+import { AbstractBinderFolder } from "./binderitem";
 import { TFolder } from "obsidian";
-
-export const fs: typeof NodeFS = window.require('node:original-fs');
-export const path: typeof NodePath = window.require('node:path');
+import Scrivener from "src/utils/scrivener";
 
 export default class ImportContext{
     // #region properties: common
@@ -18,54 +13,43 @@ export default class ImportContext{
     // #endregion properties: common
 
     // #region properties: project selection
-    private _inputPath: string | null;
+    private readonly scrivener: Scrivener;
 
     public get inputPath(): string | null{
-        return this._inputPath;
+        return this.scrivener.projectFileFullPath;
     }
 
     public set inputPath(value: string){
-        if (this._inputPath == value) {
+        if (this.scrivener.projectFileFullPath == value) {
             return;
         }
 
-        this._inputPath = value;
+        this.scrivener.load(value);
         this.inputPathChanged();
     }
 
     public get inputName(): string | null {
-        if (!this._inputPath) {
-            return null;
-        }
-
-        return path.basename(this._inputPath);
+        return this.scrivener.projectFileName;
     }
 
     public get projectName(): string {
-        const name = this.inputName;
-        if (!name) {
-            return '';
-        }
-
-        return name.substring(0, name.length - '.scrivx'.length);
+        return this.scrivener.projectName;
     }
     // #endregion properties: project selection
 
     // #region properties: project binder
-    private _scrivenerProject: any;
-    private _flatBinderArray: AbstractBinderItem[];
-    private _root: BinderFolder | null;
+    private _root: AbstractBinderFolder | null;
 
-    public get root(): BinderFolder | null {
+    public get root(): AbstractBinderFolder | null {
         return this._root;
     };
 
-    public set root(uuidOrBinderFolder: string | BinderFolder | undefined) {
-        let binderFolder: BinderFolder | undefined = undefined;
+    public set root(uuidOrBinderFolder: string | AbstractBinderFolder | undefined) {
+        let binderFolder: AbstractBinderFolder | undefined = undefined;
         if (typeof uuidOrBinderFolder === 'string') {
-            binderFolder = this.importableFolders.find(sf => sf.uuid == uuidOrBinderFolder);
+            binderFolder = this.scrivener.findImportableFolder(uuidOrBinderFolder);
         }
-        else if (uuidOrBinderFolder instanceof BinderFolder) {
+        else if (uuidOrBinderFolder instanceof AbstractBinderFolder) {
             binderFolder = uuidOrBinderFolder;
         }
 
@@ -86,14 +70,6 @@ export default class ImportContext{
             this._root = binderFolder;
         }
         this.rootChanged();
-    }
-
-    public get importableFolders(): BinderFolder[] {
-        if (!this._flatBinderArray) {
-            return [];
-        }
-
-        return this._flatBinderArray.filter(isBinderFolder).filter(f => f.hasScenes);
     }
     // #endregion properties: project binder
 
@@ -168,16 +144,20 @@ export default class ImportContext{
 
     public constructor(view: ImportModal){
         this.view = view;
-        this._inputPath = null;
+        this.scrivener = new Scrivener(this.view.plugin);
     }
 
     // #region properties changed
     protected inputPathChanged(){
-        // notify UI
+        // notify UI of both input and structure changes
         this.view.inputChanged();
+        this.view.structureChanged();
+        // set to root of project (ie. import everything)
+        this._root = this.scrivener.binder;
+        // notify UI the root has changed
+        this.view.rootChanged();
+        // update the configuration UI
         this.view.updateConfigUi();
-        // update Scrivener binder
-        this.parseScrivx();
     }
 
     protected rootChanged() {
@@ -211,73 +191,9 @@ export default class ImportContext{
     }
     // #endregion properties changed
 
-    // #region scrivx parsing
-    private parseScrivx(){
-        if (this._inputPath === null) {
-            return;
-        }
-
-        const xml = new XMLParser({
-            allowBooleanAttributes: true,
-            ignoreAttributes: false,
-            ignoreDeclaration: true,
-            attributeNamePrefix: "",
-            ignorePiTags: true,
-            numberParseOptions: {
-                leadingZeros: true,
-                hex: true,
-                skipLike: /\+[0-9]{10}/
-            },
-            parseAttributeValue: true,
-            parseTagValue: true,
-            isArray: (name, jpath, isLeafNode, isAttribute) => {
-                return name == 'BinderItem' && !isAttribute;
-            }
-        });
-
-        const data = fs.readFileSync(this._inputPath, {encoding: 'utf8'});
-
-        const parsedObj = xml.parse(data);
-
-        if(parsedObj) {
-            this._scrivenerProject = parsedObj.ScrivenerProject;
-        }
-        else
-        {
-            this._scrivenerProject = null;
-        }
-        this.readStructure();
+    public * getImportableFolders() {
+        yield* this.scrivener.importableFolders();
     }
-
-    private readStructure() {
-        this._flatBinderArray = [];
-        this._scrivenerProject.Binder.BinderItem.forEach((element: any) => {
-            this.addBinderItem(element);
-        });
-        this.view.structureChanged();
-    }
-
-    private addBinderItem(element: any, parent?: BinderFolder) {
-        const binderItem: AbstractBinderItem = ImportContext.isFolderElement(element)
-            ? new BinderFolder(element.UUID, element.Title, parent)
-            : new BinderScene(element.UUID, element.Title, parent!);
-
-        this._flatBinderArray.push(binderItem);
-        if (binderItem instanceof BinderFolder && element.Children && element.Children.BinderItem) {
-            try {
-                element.Children.BinderItem.forEach((childElement: any) => {
-                    this.addBinderItem(childElement, binderItem);
-                });
-            } catch {
-                this.view.plugin.logError(`Unable to process children on ${binderItem.title}`);
-            }
-        }
-    }
-
-    private static isFolderElement(element: any) {
-        return element.Children || element.Type == 'Folder' || element.Type == 'TrashFolder' || element.Type == 'DraftFolder'
-    }
-    // #endregion scrivx parsing
 
     public cancel() {
     }

@@ -80,7 +80,9 @@ export default class SelectScrivenerBinderItem extends Modal {
         );
     }
 
-    protected createHtmlItems(options: AbstractBinderItem[]): boolean {
+    protected createHtmlItems(
+        options: AbstractBinderItem[] | Generator<AbstractBinderItem, void, unknown>
+    ): boolean {
         const items: BinderItemHTMLElement[] = [];
 
         try
@@ -105,7 +107,9 @@ export default class SelectScrivenerBinderItem extends Modal {
         }
     }
 
-    protected showModal(binderItems: AbstractBinderItem[]): Promise<AbstractBinderItem | undefined>
+    protected showModal(
+        binderItems: AbstractBinderItem[] | Generator<AbstractBinderItem, void, unknown>
+    ): Promise<AbstractBinderItem | undefined>
     {
         return new Promise<AbstractBinderItem | undefined>(
             (resolve, reject) => {
@@ -119,7 +123,10 @@ export default class SelectScrivenerBinderItem extends Modal {
         );
     }
 
-    public static select(plugin: Scrivsidian, binderItems: AbstractBinderItem[])
+    public static select(
+        plugin: Scrivsidian,
+        binderItems: AbstractBinderItem[] | Generator<AbstractBinderItem, void, unknown>
+    )
         : Promise<AbstractBinderItem | undefined>
     {
         return new SelectScrivenerBinderItem(plugin).showModal(binderItems);

@@ -67,7 +67,7 @@ export default class ImportModal extends Modal {
                     .setIcon('lucide-folder-tree')
                     .onClick(async () => {
                         const selectedFolder = await SelectScrivenerBinderItem
-                            .select(this.plugin, this.current.importableFolders);
+                            .select(this.plugin, this.current.getImportableFolders());
                         if (!selectedFolder) {
                             // root folder selection was canceled
                             return;
