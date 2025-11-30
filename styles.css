@@ -80,3 +80,54 @@ div.scrivsidian-bindertree {
   flex-direction: row;
   justify-content: end;
 }
+
+.scrivsidian-import-status {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	padding: var(--size-4-2) 0;
+}
+
+.scrivsidian-import-progressbar {
+	width: 100%;
+	height: 8px;
+	background-color: var(--background-secondary);
+	overflow: hidden;
+	box-shadow: inset 0px 0px 0px 1px var(--background-modifier-border);
+	border-radius: var(--radius-s);
+}
+
+.scrivsidian-import-progressbar-inner {
+	width: 0;
+	height: 100%;
+	background-color: var(--interactive-accent);
+}
+
+.scrivsidian-import-log {
+	overflow: auto;
+	flex-grow: 1;
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	border: 1px solid var(--background-modifier-border);
+	padding: var(--size-4-4);
+	background-color: var(--background-secondary);
+	border-radius: var(--radius-s);
+	max-height: 300px;
+	user-select: text;
+}
+
+.scrivsidian-import-log .log-item {
+	display: inline-block;
+	line-height: var(--line-height-normal);
+	white-space: pre;
+	margin: var(--size-2-1);
+}
+
+.scrivsidian-import-log .log-item.item-warning {
+	color: var(--text-warning);
+}
+
+.scrivsidian-import-log .log-item.item-error {
+	color: var(--text-error);
+}

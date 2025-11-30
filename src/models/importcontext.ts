@@ -1,7 +1,8 @@
 import ImportModal from "src/views/import-modal/view";
-import { AbstractBinderFolder } from "./binderitem";
+import { AbstractBinderFolder, AbstractBinderItem } from "./binderitem";
 import { TFolder } from "obsidian";
 import Scrivener from "src/utils/scrivener";
+import IProgressReporting from "src/utils/progressreporting";
 
 export default class ImportContext{
     // #region properties: common
@@ -38,9 +39,9 @@ export default class ImportContext{
     // #endregion properties: project selection
 
     // #region properties: project binder
-    private _root: AbstractBinderFolder | null;
+    private _root: AbstractBinderItem | null;
 
-    public get root(): AbstractBinderFolder | null {
+    public get root(): AbstractBinderItem | null {
         return this._root;
     };
 
@@ -73,35 +74,6 @@ export default class ImportContext{
     }
     // #endregion properties: project binder
 
-    // #region properties: scenesHaveTitleProperty
-    private _scenesHaveTitleProperty: boolean = false;
-    public get scenesHaveTitleProperty(): boolean {
-        return this._scenesHaveTitleProperty;
-    }
-    public set scenesHaveTitleProperty(value: boolean) {
-        if (value == this._scenesHaveTitleProperty) {
-            return;
-        }
-        this._scenesHaveTitleProperty = value;
-        this.scenesHaveTitlePropertyChanged();
-    }
-    // #endregion properties: scenesHaveTitleProperty
-
-    // #region properties: prefixChapterFoldersWithNumber
-    private _prefixChapterFoldersWithNumber: boolean = false;
-    public get prefixChapterFoldersWithNumber(): boolean {
-        return this._prefixChapterFoldersWithNumber;
-    }
-    public set prefixChapterFoldersWithNumber(value: boolean) {
-        if (value == this._prefixChapterFoldersWithNumber) {
-            return;
-        }
-
-        this._prefixChapterFoldersWithNumber = value;
-        this.prefixChapterFoldersWithNumberChanged();
-    }
-    // #endregion properties: prefixChapterFoldersWithNumber
-
     // #region properties: outputLocation
     private _outputLocation: TFolder | undefined = undefined;
     public get outputLocation(): TFolder | undefined {
@@ -122,7 +94,9 @@ export default class ImportContext{
 
     public get fullOutputPath(): string {
         const basePath = this.outputLocation?.path || '';
-        const suffix = this._createSubFolderForProject ? this.projectName : '';
+        const suffix = this._createSubFolderForProject && this.root != this.scrivener.binder
+            ? this.projectName
+            : '';
         return basePath + (basePath.endsWith('/') ? '' : '/') + suffix;
     }
     // #endregion properties: outputLocation
@@ -166,18 +140,6 @@ export default class ImportContext{
         this.view.updateConfigUi();
     }
 
-    protected scenesHaveTitlePropertyChanged() {
-        // notify UI
-        this.view.scenesHaveTitlePropertyChanged();
-        this.view.updateConfigUi();
-    }
-
-    protected prefixChapterFoldersWithNumberChanged() {
-        // notify UI
-        this.view.prefixChapterFoldersWithNumberChanged();
-        this.view.updateConfigUi();
-    }
-
     protected outputLocationChanged() {
         // notify UI
         this.view.outputLocationChanged();
@@ -196,5 +158,10 @@ export default class ImportContext{
     }
 
     public cancel() {
+        this.scrivener.cancel();
+    }
+
+    public async import(progressReporting: IProgressReporting): Promise<void> {
+        await this.scrivener.import(progressReporting, this);
     }
 }

@@ -1,8 +1,12 @@
 import { XMLParser } from "fast-xml-parser";
-import type * as NodeFS from "node:fs";
+import * as NodeFS from "node:fs";
 import type * as NodePath from 'node:path';
+import { App, DataWriteOptions, normalizePath, TFolder } from "obsidian";
 import Scrivsidian from "src/main";
 import { AbstractBinderFolder, AbstractBinderItem, BinderFolder, BinderProject, BinderScene } from "src/models/binderitem";
+import IProgressReporting from "./progressreporting";
+import rtf2md from "./rtf2md";
+import ImportContext from "src/models/importcontext";
 
 const fs: typeof NodeFS = window.require('node:original-fs');
 const path: typeof NodePath = window.require('node:path');
@@ -48,6 +52,20 @@ export default class Scrivener {
      */
     public get binder(): BinderProject {
         return this._binder;
+    }
+
+    protected get app(): App {
+        return this.plugin.app;
+    }
+
+    private _progressReporting: IProgressReporting | undefined;
+    protected get progressReporting(): IProgressReporting | undefined {
+        return this._progressReporting;
+    }
+
+    private _context: ImportContext | undefined;
+    protected get context(): ImportContext | undefined {
+        return this._context;
     }
 
     /**
@@ -103,10 +121,21 @@ export default class Scrivener {
         });
     }
 
+    protected static parseBinderDate(value: string): Date | undefined {
+        if (value.length < 25) {
+            return undefined;
+        }
+
+        value = value.substring(0, 10) + 'T' + value.substring(11, 19) + value.substring(20);
+        return new Date(value);
+    }
+
     private addBinderItem(element: any, parent?: AbstractBinderFolder) {
+        const createdDate = Scrivener.parseBinderDate(element.Created);
+        const modifiedDate = Scrivener.parseBinderDate(element.Modified);
         const binderItem: AbstractBinderItem = Scrivener.isFolderElement(element)
-            ? new BinderFolder(element.UUID, element.Title, parent)
-            : new BinderScene(element.UUID, element.Title, parent!);
+            ? new BinderFolder(element.UUID, element.Title, parent, createdDate, modifiedDate)
+            : new BinderScene(element.UUID, element.Title, parent!, createdDate, modifiedDate);
 
         if (binderItem instanceof BinderFolder && element.Children && element.Children.BinderItem) {
             try {
@@ -127,7 +156,6 @@ export default class Scrivener {
         first: AbstractBinderItem, predicate: (item: AbstractBinderItem) => boolean
     ): Generator<AbstractBinderItem, void, any> {
         if (!predicate(first)) {
-            this.plugin.logInfo('Skipping ' + first.uuid + ' [' + first.title + ']');
             return;
         }
 
@@ -141,10 +169,9 @@ export default class Scrivener {
     }
 
     public importableFolders() {
-        this.plugin.logInfo('importableFolders entered');
         return this.iterateBinder(
             this.binder,
-            (bi) => bi instanceof AbstractBinderFolder // && bi.totalSceneCount > 0
+            (bi) => bi instanceof AbstractBinderFolder
         );
     }
 
@@ -154,5 +181,109 @@ export default class Scrivener {
                 return importableItem;
             }
         }
+    }
+
+    private _cancellationRequested: boolean;
+
+    public cancel(): void {
+        this._cancellationRequested = true;
+    }
+
+    public async import(reporting: IProgressReporting, ctx: ImportContext): Promise<void> {
+        if (!ctx.outputLocation) {
+            reporting.log("Output location not set", "error");
+            return;
+        }
+
+        this._context = ctx;
+        this._progressReporting = reporting;
+
+        try {
+            const outputLocation = ctx.createSubFolderForProject && ctx.root != this.binder
+                ? await this.app.vault.createFolder(ctx.fullOutputPath)
+                : ctx.outputLocation;
+
+            if (ctx.root instanceof AbstractBinderFolder) {
+                await this.importFolder(ctx.root, outputLocation);
+                return;
+            }
+
+            if (ctx.root instanceof BinderScene) {
+                await this.importScene(ctx.root, outputLocation);
+                return;
+            }
+
+            reporting.log("No or invalid binder item selected", "error");
+        }
+        finally {
+            this._context = undefined;
+            this._progressReporting = undefined;
+        }
+    }
+
+    private async importFolder(binderFolder: AbstractBinderFolder, vaultParentFolder: TFolder, prefix?: number): Promise<void> {
+        this._progressReporting!.progress();
+        this._progressReporting!.status(`Import folder ${binderFolder.uuid}: ${binderFolder.title}`);
+        const vaultItemName = (prefix !== undefined ? prefix.toString() + ' - ' : '') + normalizePath(binderFolder.title);
+
+        const newVaultFolder = await this.app.vault.createFolder(path.join(vaultParentFolder.path, vaultItemName));
+        const needPrefix = binderFolder.needIndexPrefixForChildren;
+
+        // if the folder has actual content, add it as a '0.md' file to the vault folder
+        await this.createAndConvert(binderFolder, path.join(newVaultFolder.path, '0.md'));
+
+        for(let index = 0; index < binderFolder.children.length; index++) {
+            if (this._cancellationRequested) {
+                break;
+            }
+            const subItem = binderFolder.children[index];
+            if (subItem instanceof AbstractBinderFolder) {
+                await this.importFolder(subItem, newVaultFolder, needPrefix ? index + 1 : undefined);
+            }
+            if (subItem instanceof BinderScene) {
+                await this.importScene(subItem, newVaultFolder, needPrefix ? index + 1 : undefined);
+            }
+        }
+    }
+ 
+    private async importScene(binderScene: BinderScene, vaultParentFolder: TFolder, prefix?: number): Promise<void> {
+        this._progressReporting!.progress();
+        this._progressReporting!.status(`Import scene ${binderScene.uuid}: ${binderScene.title}`);
+
+        // determine note name
+        const vaultItemName = (prefix !== undefined ? prefix.toString() + ' - ' : '') + normalizePath(binderScene.title) + '.md';
+
+        // create vault note and convert Scrivener content
+        await this.createAndConvert(binderScene, path.join(vaultParentFolder.path, vaultItemName));
+    }
+
+    private async getScrivenerContentFile(binderItem: AbstractBinderItem) {
+        const contentPath = path.join(path.dirname(this.projectFileFullPath), 'Files/Data', binderItem.uuid, 'content.rtf');
+        if (fs.existsSync(contentPath)) {
+            return await fs.promises.open(contentPath, fs.constants.O_RDONLY)
+        }
+    }
+
+    private async createAndConvert(binderItem: AbstractBinderItem, vaultPath: string) {
+        const file = await this.getScrivenerContentFile(binderItem);
+
+        const size = (await file?.stat())?.size ?? 0;
+
+        if (!size) {
+            return;
+        }
+
+        const options: DataWriteOptions = {
+            ctime: binderItem.createdOn?.valueOf(),
+            mtime: binderItem.modifiedOn?.valueOf() ?? binderItem.createdOn?.valueOf()
+        };
+
+        const newVaultFile = await this.app.vault.create(vaultPath, ``, options);
+
+        this.app.fileManager.processFrontMatter(newVaultFile, frontMatter => {
+            frontMatter['scrivener_uuid'] = binderItem.uuid
+        }, options);
+
+        await rtf2md(file!.createReadStream(), newVaultFile, options);
     }
 }

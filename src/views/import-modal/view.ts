@@ -4,6 +4,7 @@ import { BinderFolder } from "src/models/binderitem";
 import ImportContext from "src/models/importcontext";
 import SelectScrivenerBinderItem from "../common-modal/select-scriv-binderitem";
 import FolderSuggest from "src/utils/foldersuggest";
+import { HTMLElementProgressReporting } from "src/utils/progressreporting";
 
 export default class ImportModal extends Modal {
     private readonly parent: TFolder;
@@ -13,8 +14,6 @@ export default class ImportModal extends Modal {
     private readonly rootSetting: Setting;
     private readonly outputLocationSetting: Setting;
     private readonly createSubFolderForProjectSetting: Setting;
-    private readonly scenesHaveTitlePropertySetting: Setting;
-    private readonly prefixChapterFoldersWithNumberSetting: Setting;
     private readonly currentInfoEl: HTMLDivElement;
     private readonly importButton: HTMLButtonElement;
     public readonly plugin: Scrivsidian;
@@ -105,29 +104,6 @@ export default class ImportModal extends Modal {
         ;
 
         new Setting(this.contentEl)
-            .setName('Options')
-            .setHeading();
-
-        this.scenesHaveTitlePropertySetting = new Setting(this.contentEl)
-            .setName('Add scene title property')
-            .setDesc('When on, each scene note will have a title property set')
-            .addToggle(toggle => {
-                toggle
-                    .setValue(this.current.scenesHaveTitleProperty)
-                    .onChange(value => this.current.scenesHaveTitleProperty = value)
-            })
-        ;
-        this.prefixChapterFoldersWithNumberSetting = new Setting(this.contentEl)
-            .setName('Prefix chapter folders')
-            .setDesc('When on, each chapter folder (binder item containing only scenes) is prefixed by its numerical index in it\'s parent.')
-            .addToggle(toggle => {
-                toggle
-                    .setValue(this.current.prefixChapterFoldersWithNumber)
-                    .onChange(value => this.current.prefixChapterFoldersWithNumber = value)
-            })
-        ;
-
-        new Setting(this.contentEl)
             .setName('Configured import process')
             .setHeading();
 
@@ -135,10 +111,10 @@ export default class ImportModal extends Modal {
 
         const buttonContainerEl = this.contentEl.createDiv('modal-button-container');
         this.importButton = buttonContainerEl.createEl('button', { cls: 'mod-cta', text: 'Import' });
+        this.importButton.addEventListener('click', async () => await this.startImport())
 
         this.inputChanged();
         this.rootChanged();
-        this.scenesHaveTitlePropertyChanged();
         this.current.outputLocation = this.parent;
         this.updateConfigUi();
     }
@@ -158,20 +134,10 @@ export default class ImportModal extends Modal {
     }
 
     public rootChanged(){
-        const { scenesHaveTitlePropertySetting, prefixChapterFoldersWithNumberSetting, current } = this;
+        const { current } = this;
         const rootBinder = current.root;
 
-        scenesHaveTitlePropertySetting.setDisabled(!rootBinder);
-        prefixChapterFoldersWithNumberSetting.setDisabled(!rootBinder);
         this.importButton.disabled = !rootBinder;
-    }
-
-    public scenesHaveTitlePropertyChanged() {
-        // void
-    }
-
-    public prefixChapterFoldersWithNumberChanged() {
-        // void
     }
 
     public createSubFolderForProjectChanged() {
@@ -187,47 +153,35 @@ export default class ImportModal extends Modal {
         // void
     }
 
-    public updateConfigUi() {
-        const { currentInfoEl, current } = this;
+    protected getConfigDescription(): DocumentFragment {
+        const { current } = this;
 
-        currentInfoEl.empty();
+        const fragment = new DocumentFragment();
+
         if (!current.inputPath) {
-            currentInfoEl.createSpan({ text: 'Pick a Scrivener project to start the import process.' });
-            return;
-        }
-        if (!current.root) {
-            const importDescription = new DocumentFragment();
-            importDescription.createEl('span', { text: 'You\'ll be importing from ' });
-            importDescription.createEl('span', { cls: 'u-pop', text: current.inputName! });
-            importDescription.createEl('span', { text: '; however, you need to select which binder folder you want to import.' });
-            currentInfoEl.setText(importDescription);
-            return;
+            fragment.appendText('Pick a Scrivener project to start the import process.');
+            return fragment;
         }
 
-        const importDescription = new DocumentFragment();
-
-        const selectionParagraph = importDescription.createEl('p');
+        const selectionParagraph = fragment.createEl('p');
         selectionParagraph.createEl('span', { text: 'You\'ll be importing ' });
-        selectionParagraph.createEl('span', { cls: 'u-pop', text: current.root!.totalSceneCount.toString() });
+        selectionParagraph.createEl('span', { cls: 'u-pop', text: current.root ? current.root.totalSceneCount.toString() : '?' });
         selectionParagraph.createEl('span', { text: ' scenes from binder ' });
-        selectionParagraph.createEl('span', { cls: 'u-pop', text: current.root!.title });
+        selectionParagraph.createEl('span', { cls: 'u-pop', text: current.root ? current.root.title : '?' });
         selectionParagraph.createEl('span', { text: ' in ' });
         selectionParagraph.createEl('span', { cls: 'u-pop', text: current.inputName! });
         selectionParagraph.createEl('span', { text: '.' });
 
-        const outputParagraph = importDescription.createEl('p');
+        const outputParagraph = fragment.createEl('p');
         outputParagraph.createEl('span', { text: 'The project will be imported into ' });
         outputParagraph.createEl('span', { cls: 'u-pop', text: current.fullOutputPath });
         outputParagraph.createEl('span', { text: '.' });
 
-        const optionsParagraph = importDescription.createEl('p');
-        optionsParagraph.createEl('span', { text: 'The title property ' });
-        optionsParagraph.createEl('span', { cls: 'u-pop', text: current.scenesHaveTitleProperty ? 'will' : 'won\'t' });
-        optionsParagraph.createEl('span', { text: ' be set on the scenes, chapter folders ' });
-        optionsParagraph.createEl('span', { cls: 'u-pop', text: current.prefixChapterFoldersWithNumber ? 'will' : 'won\'t' });
-        optionsParagraph.createEl('span', { text: ' be prefixed by their index number.' });
+        return fragment;
+    }
 
-        currentInfoEl.setText(importDescription);
+    public updateConfigUi() {
+        this.currentInfoEl.setText(this.getConfigDescription());
     }
 
 	onClose() {
@@ -239,4 +193,45 @@ export default class ImportModal extends Modal {
 			current.cancel();
 		}
 	}
+
+    protected async startImport(): Promise<void> {
+        const { contentEl, current } = this;
+        
+        contentEl.empty();
+
+        const currentInfoEl = contentEl.createDiv({ cls: 'scrivsidian-import-currentinfo' });
+        currentInfoEl.setText(this.getConfigDescription());
+
+        const statusEl = contentEl.createDiv({cls: 'scrivsidian-import-status'});
+
+        const progressOuter = contentEl.createDiv({cls: 'scrivsidian-import-progressbar'});
+        const progressInner = progressOuter.createDiv({cls: 'scrivsidian-import-progressbar-inner'});
+
+        const logOuter = contentEl.createDiv({cls: 'scrivsidian-import-log-container'});
+        logOuter.createDiv({cls: 'scrivsidian-import-log-header', text: 'Log'});
+        const logInner = logOuter.createDiv({cls: 'scrivsidian-import-log'});
+        logOuter.hide();
+
+        const progressReporting = new HTMLElementProgressReporting(
+            current.root!.totalBinderItemCount, statusEl, logOuter, logInner, progressInner
+        );
+
+        let buttonsEl = contentEl.createDiv('modal-button-container');
+        let cancelButtonEl = buttonsEl.createEl('button', { cls: 'mod-danger', text: 'Stop' }, el => {
+            el.addEventListener('click', () => {
+                current.cancel();
+                cancelButtonEl.detach();
+            });
+        });
+        try {
+            await current.import(progressReporting);
+        }
+        finally {
+            buttonsEl.empty();
+            buttonsEl.createEl('button', { cls: 'mod-cta', text: 'Done' }, el => {
+                el.addEventListener('click', () => this.close());
+            });
+            progressReporting.hideStatus();
+        }
+    }
 }
