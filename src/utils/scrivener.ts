@@ -252,7 +252,7 @@ export default class Scrivener {
     private async importFolder(binderFolder: AbstractBinderFolder, vaultParentFolder: TFolder, prefix?: number): Promise<void> {
         this._progressReporting!.progress();
         this._progressReporting!.status(`Import folder ${binderFolder.uuid}: ${binderFolder.title}`);
-        const vaultItemName = (prefix !== undefined ? prefix.toString() + ' - ' : '') + normalizePath(binderFolder.title);
+        const vaultItemName = (prefix !== undefined ? prefix.toString() + ' - ' : '') + sanitizeTitle(binderFolder);
 
         const newVaultFolder = await this.app.vault.createFolder(path.join(vaultParentFolder.path, vaultItemName));
         const needPrefix = binderFolder.needIndexPrefixForChildren;
@@ -279,7 +279,7 @@ export default class Scrivener {
         this._progressReporting!.status(`Import scene ${binderScene.uuid}: ${binderScene.title}`);
 
         // determine note name
-        const vaultItemName = (prefix !== undefined ? prefix.toString() + ' - ' : '') + normalizePath(binderScene.title) + '.md';
+        const vaultItemName = (prefix !== undefined ? prefix.toString() + ' - ' : '') + sanitizeTitle(binderScene) + '.md';
 
         // create vault note and convert Scrivener content
         await this.createAndConvert(binderScene, path.join(vaultParentFolder.path, vaultItemName));
@@ -345,3 +345,22 @@ export default class Scrivener {
         return binderItem.keywords.length > 0;
     }
 }
+
+const illegalRe = /[\/\?<>\\:\*\|"]/g;
+const controlRe = /[\x00-\x1f\x80-\x9f]/g;
+const reservedRe = /^\.+$/;
+const windowsReservedRe = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$/i;
+const windowsTrailingRe = /[\. ]+$/;
+const startsWithDotRe = /^\./; // Regular expression to match filenames starting with "."
+const badLinkRe = /[\[\]#|^]/g; // Regular expression to match characters that interferes with links: [ ] # | ^
+
+function sanitizeTitle(binderItem: AbstractBinderItem): string {
+    return binderItem.title
+        .replace(illegalRe, '')
+        .replace(controlRe, '')
+        .replace(reservedRe, '')
+        .replace(windowsReservedRe, '')
+        .replace(windowsTrailingRe, '')
+        .replace(startsWithDotRe, '')
+        .replace(badLinkRe, '');
+};
