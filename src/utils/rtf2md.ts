@@ -56,7 +56,7 @@ function rtf2mdtree(rtf: any): Root {
 
   let pendingFreeSpans = [];
   for (const node of rtf.content) {
-    if (node.constructor.name == "RTFSpan") {
+    if (node.value !== undefined) {
       node.value = node.value.replace(/<!?[$]Scr[^>]+>/g, "");
       pendingFreeSpans.push(node);
     } else {
