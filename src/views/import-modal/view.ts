@@ -10,10 +10,7 @@ export default class ImportModal extends Modal {
     private readonly parent: TFolder;
     private abortController: AbortController;
     private readonly current: ImportContext;
-    private readonly inputSetting: Setting;
     private readonly rootSetting: Setting;
-    private readonly outputLocationSetting: Setting;
-    private readonly createSubFolderForProjectSetting: Setting;
     private readonly currentInfoEl: HTMLDivElement;
     private readonly importButton: HTMLButtonElement;
     public readonly plugin: Scrivsidian;
@@ -35,7 +32,7 @@ export default class ImportModal extends Modal {
             .setName('Input')
             .setHeading();
 
-        this.inputSetting = new Setting(this.contentEl)
+        new Setting(this.contentEl)
             .setName("File")
             .setDesc('Pick the file to import')
             .addButton(btn => {
@@ -82,7 +79,7 @@ export default class ImportModal extends Modal {
             .setName('Output')
             .setHeading();
 
-        this.outputLocationSetting = new Setting(this.contentEl)
+        new Setting(this.contentEl)
             .setName('Location')
             .setDesc('Pick the vault location to import into.')
             .addText(txt => {
@@ -96,7 +93,7 @@ export default class ImportModal extends Modal {
         new Setting(this.contentEl)
             .setName('Options')
             .setHeading();
-        this.createSubFolderForProjectSetting = new Setting(this.contentEl)
+        new Setting(this.contentEl)
             .setName('New sub folder')
             .setDesc('When on, a new sub folder is created to import the project into')
             .addToggle(toggle => {
