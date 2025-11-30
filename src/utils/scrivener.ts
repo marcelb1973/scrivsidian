@@ -236,11 +236,6 @@ export default class Scrivener {
                 return;
             }
 
-            if (ctx.root instanceof BinderScene) {
-                await this.importScene(ctx.root, outputLocation);
-                return;
-            }
-
             reporting.log("No or invalid binder item selected", "error");
         }
         finally {

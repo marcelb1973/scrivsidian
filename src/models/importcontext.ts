@@ -20,7 +20,10 @@ export default class ImportContext{
         return this.scrivener.projectFileFullPath;
     }
 
-    public set inputPath(value: string){
+    public set inputPath(value: string | null) {
+        if (value === null) {
+            return;
+        }
         if (this.scrivener.projectFileFullPath == value) {
             return;
         }
@@ -39,9 +42,9 @@ export default class ImportContext{
     // #endregion properties: project selection
 
     // #region properties: project binder
-    private _root: AbstractBinderItem | null;
+    private _root: AbstractBinderFolder | undefined;
 
-    public get root(): AbstractBinderItem | null {
+    public get root(): AbstractBinderFolder | undefined {
         return this._root;
     };
 
@@ -65,7 +68,7 @@ export default class ImportContext{
         }
 
         if (!binderFolder) {
-            this._root = null;
+            this._root = undefined;
         }
         else {
             this._root = binderFolder;
