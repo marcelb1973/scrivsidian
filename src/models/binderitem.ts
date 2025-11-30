@@ -1,3 +1,5 @@
+import Keyword from "./keyword";
+
 /**
  * Represents an abstract Scrivener binder item
  */
@@ -26,6 +28,10 @@ export abstract class AbstractBinderItem {
      * The optional date and time the Scrivener binder item was last modified
      */
     readonly modifiedOn: Date | undefined;
+    /**
+     * The keywords associated with the Scrivener binder item
+     */
+    readonly keywords: Keyword[] = [];
 
     /**
      * Returns the number of Scrivener scene binder items, regardless of tree depth
@@ -55,6 +61,14 @@ export abstract class AbstractBinderItem {
         if (this.parent) {
             this.parent.children.push(this);
         }
+    }
+
+    /**
+     * Adds a keyword to the Scrivener binder item.
+     * @param keyword The keyword to add
+     */
+    public addKeyword(keyword: Keyword) {
+        this.keywords.push(keyword);
     }
 
     /**

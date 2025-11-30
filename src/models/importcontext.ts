@@ -130,6 +130,21 @@ export default class ImportContext{
     }
     // #endregion properties: includeScrivenerUUIDProperty
 
+    // #region properties: keywordsAsTags
+    private _keywordsAsTags: boolean = true;
+    public get keywordsAsTags(): boolean {
+        return this._keywordsAsTags;
+    }
+    public set keywordsAsTags(value: boolean) {
+        if (this._keywordsAsTags == value) {
+            return;
+        }
+
+        this._keywordsAsTags = value;
+        this.keywordsAsTagsChanged();
+    }
+    // #endregion properties: keywordsAsTags
+
     public constructor(view: ImportModal){
         this.view = view;
         this.scrivener = new Scrivener(this.view.plugin);
@@ -169,6 +184,12 @@ export default class ImportContext{
     protected includeScrivenerUUIDPropertyChanged() {
         // notify UI
         this.view.includeScrivenerUUIDPropertyChanged();
+        this.view.updateConfigUi();
+    }
+
+    protected keywordsAsTagsChanged() {
+        // notify UI
+        this.view.keywordsAsTagsChanged();
         this.view.updateConfigUi();
     }
     // #endregion properties changed

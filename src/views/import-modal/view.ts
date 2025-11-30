@@ -114,6 +114,16 @@ export default class ImportModal extends Modal {
         ;
 
         new Setting(this.contentEl)
+            .setName('Import Scrivener keywords as tags')
+            .setDesc('When on, the Scrivener binder item keywords are included as tags into the frontmatter')
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.current.keywordsAsTags)
+                    .onChange(value => this.current.keywordsAsTags = value)
+            })
+        ;
+
+        new Setting(this.contentEl)
             .setName('Configured import process')
             .setHeading();
 
@@ -167,6 +177,10 @@ export default class ImportModal extends Modal {
         // void
     }
 
+    public keywordsAsTagsChanged() {
+        // void
+    }
+
     protected getConfigDescription(): DocumentFragment {
         const { current } = this;
 
@@ -195,6 +209,11 @@ export default class ImportModal extends Modal {
         includeScrivUUIDParagraph.createEl('span', { text: 'Scrivener UUID ' });
         includeScrivUUIDParagraph.createEl('span', { cls: 'u-pop', text: current.includeScrivenerUUIDProperty ? 'added' : 'not added' });
         includeScrivUUIDParagraph.createEl('span', { text: ' to frontmatter.' });
+
+        const keywordsAsTagsParagraph = fragment.createEl('p');
+        keywordsAsTagsParagraph.createSpan({ text: 'Scrivener keywords will ' });
+        keywordsAsTagsParagraph.createSpan({ cls: 'u-pop', text: current.keywordsAsTags ? 'be' : 'not be' });
+        keywordsAsTagsParagraph.createSpan({ text: ' added as tags to frontmatter.' });
 
         return fragment;
     }

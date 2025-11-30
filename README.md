@@ -7,6 +7,7 @@ This is a plugin for [Obsidian](https://obsidian.md "Obsidian - Sharpen your thi
 
 * Importing (part of) a Scrivener project (`*.scrivx` file)
 * Automatically adds numeric prefixes to maintain sort order (when sorting by note name)
+* Convert keywords into tags
 
 ## Scrivener features support
 
@@ -20,7 +21,7 @@ Folder binders with text content, will be imported as `0.md` inside the correspo
 
 ### Meta data (keyword, status, etc.)
 
-Meta data is currently not processed. Support will be added in a future version.
+Meta data, other than keywords, is currently not processed. Support may be added in a future version.
 
 ### Images and other external files
 

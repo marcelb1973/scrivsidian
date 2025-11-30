@@ -7,6 +7,7 @@ import { AbstractBinderFolder, AbstractBinderItem, BinderFolder, BinderProject, 
 import IProgressReporting from "./progressreporting";
 import rtf2md from "./rtf2md";
 import ImportContext from "src/models/importcontext";
+import Keyword from "src/models/keyword";
 
 const fs: typeof NodeFS = window.require('node:original-fs');
 const path: typeof NodePath = window.require('node:path');
@@ -68,6 +69,11 @@ export default class Scrivener {
         return this._context;
     }
 
+    private _keywords: Map<number, Keyword> = new Map<number, Keyword>();
+    protected get keywords(): Map<number, Keyword> {
+        return this._keywords
+    }
+
     /**
      * Initializes a instance of the Scrivener class
      * @param plugin The current Scrivsidian plugin instance
@@ -95,7 +101,7 @@ export default class Scrivener {
             parseAttributeValue: true,
             parseTagValue: true,
             isArray: (name, jpath, isLeafNode, isAttribute) => {
-                return name == 'BinderItem' && !isAttribute;
+                return !isAttribute && (name == 'BinderItem' || name == 'Keyword' || name == 'KeywordID');
             }
         });
 
@@ -105,6 +111,7 @@ export default class Scrivener {
 
         if(parsedObj) {
             this._projectFileFullPath = projectFileFullPath;
+            this.readKeywords(parsedObj.ScrivenerProject)
             this.readStructure(parsedObj.ScrivenerProject);
         }
         else
@@ -118,6 +125,13 @@ export default class Scrivener {
         this._binder = new BinderProject(this.projectName);
         projectXml.Binder.BinderItem.forEach((element: any) => {
             this.addBinderItem(element, this._binder);
+        });
+    }
+
+    private readKeywords(projectXml: any) {
+        this.keywords.clear();
+        projectXml.Keywords.Keyword.forEach((element: any) => {
+            this.addKeyword(element);
         });
     }
 
@@ -137,6 +151,15 @@ export default class Scrivener {
             ? new BinderFolder(element.UUID, element.Title, parent, createdDate, modifiedDate)
             : new BinderScene(element.UUID, element.Title, parent!, createdDate, modifiedDate);
 
+        if (element.Keywords) {
+            element.Keywords.KeywordID.forEach((element: any) => {
+                const kwd = this.keywords.get(element);
+                if (kwd) {
+                    binderItem.addKeyword(kwd);
+                }
+            });
+        }
+
         if (binderItem instanceof BinderFolder && element.Children && element.Children.BinderItem) {
             try {
                 element.Children.BinderItem.forEach((childElement: any) => {
@@ -146,6 +169,11 @@ export default class Scrivener {
                 this.plugin.logError(`Unable to process children on ${binderItem.title}`);
             }
         }
+    }
+
+    private addKeyword(element: any) {
+        const keyword = new Keyword(element.ID, element.Title);
+        this._keywords.set(keyword.id, keyword);
     }
 
     private static isFolderElement(element: any) {
@@ -280,12 +308,40 @@ export default class Scrivener {
 
         const newVaultFile = await this.app.vault.create(vaultPath, ``, options);
 
-        if (this.context?.includeScrivenerUUIDProperty) {
+        if (this.hasFrontMatter(binderItem)) {
             this.app.fileManager.processFrontMatter(newVaultFile, frontMatter => {
-                frontMatter['scrivener_uuid'] = binderItem.uuid
+                if (this.hasScrivenerUUIDFrontMatter()) {
+                    frontMatter['scrivener_uuid'] = binderItem.uuid
+                }
+                if (this.hasKeywordsFrontMatter(binderItem)) {
+                    frontMatter['tags'] = binderItem.keywords.map((kwd) => kwd.name);
+                }
             }, options);
         }
 
         await rtf2md(file!.createReadStream(), newVaultFile, options);
+    }
+
+    private hasFrontMatter(binderItem: AbstractBinderItem): boolean {
+        if (this.hasScrivenerUUIDFrontMatter()) {
+            return true;
+        }
+        if (this.hasKeywordsFrontMatter(binderItem)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private hasScrivenerUUIDFrontMatter(): boolean {
+        return this.context?.includeScrivenerUUIDProperty || false;
+    }
+
+    private hasKeywordsFrontMatter(binderItem: AbstractBinderItem): boolean {
+        if (!this.context?.keywordsAsTags) {
+            return false;
+        }
+
+        return binderItem.keywords.length > 0;
     }
 }
