@@ -30,7 +30,7 @@ type MainTree = Paragraph | ThematicBreak | Heading;
 
 function removeDuplicateQuotationSpans(spans: any[]) {
   // defines the characters that may appear in two consecutive spans
-  const chars: string[] = ['\u2019', '\u201c', '\u201d']
+  const chars: string[] = ['\u2018', '\u2019', '\u201c', '\u201d']
 
   // don't bother if the array is empty
   if (!spans.length) {
