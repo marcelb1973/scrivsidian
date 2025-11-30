@@ -23,7 +23,7 @@ export abstract class AbstractBinderItem {
      */
     readonly createdOn: Date | undefined;
     /**
-     * The option date and time the Scrivener binder item was last modified
+     * The optional date and time the Scrivener binder item was last modified
      */
     readonly modifiedOn: Date | undefined;
 
