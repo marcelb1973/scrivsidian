@@ -130,6 +130,12 @@ export default class Scrivener {
 
     private readKeywords(projectXml: any) {
         this.keywords.clear();
+        if (!projectXml.Keywords) {
+            return;
+        }
+        if (!projectXml.Keywords.Keyword) {
+            return;
+        }
         projectXml.Keywords.Keyword.forEach((element: any) => {
             this.addKeyword(element);
         });
