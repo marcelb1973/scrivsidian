@@ -93,6 +93,9 @@ export default class ImportModal extends Modal {
                 new FolderSuggest(this.app, txt.inputEl, this.parent);
             })
         ;
+        new Setting(this.contentEl)
+            .setName('Options')
+            .setHeading();
         this.createSubFolderForProjectSetting = new Setting(this.contentEl)
             .setName('New sub folder')
             .setDesc('When on, a new sub folder is created to import the project into')
@@ -100,6 +103,16 @@ export default class ImportModal extends Modal {
                 toggle
                     .setValue(this.current.createSubFolderForProject)
                     .onChange(value => this.current.createSubFolderForProject = value)
+            })
+        ;
+
+        new Setting(this.contentEl)
+            .setName('Include Scrivener UUID in frontmatter')
+            .setDesc('When on, the Scrivener binder item UUID is included into the frontmatter')
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.current.includeScrivenerUUIDProperty)
+                    .onChange(value => this.current.includeScrivenerUUIDProperty = value)
             })
         ;
 
@@ -144,6 +157,10 @@ export default class ImportModal extends Modal {
         // void
     }
 
+    public includeScrivenerUUIDPropertyChanged() {
+        // void
+    }
+
     protected setOutputLocation(value: string) {
         const folder = value == '' ? undefined : (this.app.vault.getFolderByPath(value) || undefined);
         this.current.outputLocation = folder;
@@ -176,6 +193,11 @@ export default class ImportModal extends Modal {
         outputParagraph.createEl('span', { text: 'The project will be imported into ' });
         outputParagraph.createEl('span', { cls: 'u-pop', text: current.fullOutputPath });
         outputParagraph.createEl('span', { text: '.' });
+
+        const includeScrivUUIDParagraph = fragment.createEl('p');
+        includeScrivUUIDParagraph.createEl('span', { text: 'Scrivener UUID ' });
+        includeScrivUUIDParagraph.createEl('span', { cls: 'u-pop', text: current.includeScrivenerUUIDProperty ? 'added' : 'not added' });
+        includeScrivUUIDParagraph.createEl('span', { text: ' to frontmatter.' });
 
         return fragment;
     }

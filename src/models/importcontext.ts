@@ -116,6 +116,20 @@ export default class ImportContext{
     }
     // #endregion properties: createSubFolderForProject
 
+    // #region properties: includeScrivenerUUIDProperty
+    private _includeScrivenerUUIDProperty: boolean = false;
+    public get includeScrivenerUUIDProperty(): boolean {
+        return this._includeScrivenerUUIDProperty;
+    }
+    public set includeScrivenerUUIDProperty(value: boolean) {
+        if (this._includeScrivenerUUIDProperty == value) {
+            return;
+        }
+        this._includeScrivenerUUIDProperty = value;
+        this.includeScrivenerUUIDPropertyChanged();
+    }
+    // #endregion properties: includeScrivenerUUIDProperty
+
     public constructor(view: ImportModal){
         this.view = view;
         this.scrivener = new Scrivener(this.view.plugin);
@@ -149,6 +163,12 @@ export default class ImportContext{
     protected createSubFolderForProjectChanged() {
         // notify UI
         this.view.createSubFolderForProjectChanged();
+        this.view.updateConfigUi();
+    }
+
+    protected includeScrivenerUUIDPropertyChanged() {
+        // notify UI
+        this.view.includeScrivenerUUIDPropertyChanged();
         this.view.updateConfigUi();
     }
     // #endregion properties changed

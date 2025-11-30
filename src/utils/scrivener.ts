@@ -280,9 +280,11 @@ export default class Scrivener {
 
         const newVaultFile = await this.app.vault.create(vaultPath, ``, options);
 
-        this.app.fileManager.processFrontMatter(newVaultFile, frontMatter => {
-            frontMatter['scrivener_uuid'] = binderItem.uuid
-        }, options);
+        if (this.context?.includeScrivenerUUIDProperty) {
+            this.app.fileManager.processFrontMatter(newVaultFile, frontMatter => {
+                frontMatter['scrivener_uuid'] = binderItem.uuid
+            }, options);
+        }
 
         await rtf2md(file!.createReadStream(), newVaultFile, options);
     }
